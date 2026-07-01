@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import FitterPortal from './pages/FitterPortal';
 import AdminDashboard from './pages/AdminDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -9,8 +10,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/fitter" element={<FitterPortal />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/fitter" element={<FitterPortal />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

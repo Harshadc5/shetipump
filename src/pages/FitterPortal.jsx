@@ -227,8 +227,8 @@ const FitterPortal = () => {
       if (error) throw error;
       
       alert('Form submitted successfully!');
-      // Reset form or navigate
-      navigate('/admin');
+      // Reset the form for the next installation
+      window.location.reload();
     } catch (error) {
       console.error('Error submitting form:', error);
       alert(`Error submitting: ${error.message || error}\n\n(Have you setup the Supabase table and RLS?)`);

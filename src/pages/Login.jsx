@@ -2,22 +2,35 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import solarBg from '../assets/solar_bg.png';
 import { Sun } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import './Login.css';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (username.toLowerCase() === 'admin' && password === 'Mitali') {
-      navigate('/admin');
-    } else if (username.toLowerCase() === 'fitter' && password === 'fitter') {
-      navigate('/fitter');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      alert(`Login failed: ${error.message}`);
     } else {
-      alert("Invalid credentials.");
+      // Route based on email domain or string matching
+      if (email.toLowerCase().includes('admin')) {
+        navigate('/admin');
+      } else {
+        navigate('/fitter');
+      }
     }
   };
 
@@ -61,12 +74,12 @@ const Login = () => {
             
             <form onSubmit={handleLogin}>
               <div className="input-group">
-                <label>Username</label>
+                <label>Email Address</label>
                 <input 
-                  type="text" 
-                  placeholder="Enter your username" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email" 
+                  placeholder="Enter your email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required 
                 />
               </div>
@@ -81,7 +94,9 @@ const Login = () => {
                 />
               </div>
               
-              <button type="submit" className="btn-login">Sign In securely</button>
+              <button type="submit" className="btn-login" disabled={loading}>
+                {loading ? 'Authenticating...' : 'Sign In securely'}
+              </button>
             </form>
           </div>
         </div>
