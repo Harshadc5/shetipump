@@ -78,7 +78,32 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase.from('installations').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      setRecords(data || []);
+      
+      const mappedData = (data || []).map(row => ({
+        id: row.id,
+        created_at: row.created_at,
+        beneficiaryName: row.beneficiaryname,
+        beneficiaryAddress: row.beneficiaryaddress,
+        installerName: row.installername,
+        installerMobile: row.installermobile,
+        commissioningDate: row.commissioningdate,
+        controllerId: row.controllerid,
+        pumpId: row.pumpid,
+        controllerVendorName: row.controllervendorname,
+        perPanelKw: row.perpanelkw,
+        pumpCapacity: row.pumpcapacity,
+        panelCount: row.panelcount,
+        motorHead: row.motorhead,
+        motorCapacity: row.motorcapacity,
+        motorSerialNumber: row.motorserialnumber,
+        motorManufactureName: row.motormanufacturename,
+        panels_almm: row.panels_almm,
+        files_info: row.files_info,
+        signature: row.signature,
+        vendorRepresentativeName: row.vendorrepresentativename
+      }));
+
+      setRecords(mappedData);
     } catch (error) {
       console.error('Error fetching records:', error);
       // Fallback data if table not yet created

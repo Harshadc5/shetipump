@@ -204,10 +204,25 @@ const FitterPortal = () => {
       files_info: Object.keys(files).map(k => ({ field: k, name: files[k].name }))
     };
 
+    // PostgreSQL automatically lowercases all unquoted column names when creating tables.
+    // So beneficiaryName in SQL became beneficiaryname in the database.
+    // We must lowercase all keys in our JS object before sending it to Supabase.
+    const dbPayload = {};
+    for (const key in submissionData) {
+      // Convert camelCase to completely lowercase to match Postgres schema
+      let value = submissionData[key];
+      
+      // Explicit casts for Postgres types
+      if (key === 'panelCount') value = parseInt(value, 10) || 0;
+      if (key === 'commissioningDate' && !value) value = null; // empty string fails date cast
+      
+      dbPayload[key.toLowerCase()] = value;
+    }
+
     try {
       const { data, error } = await supabase
         .from('installations')
-        .insert([submissionData]);
+        .insert([dbPayload]);
 
       if (error) throw error;
       
