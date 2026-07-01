@@ -362,10 +362,15 @@ const FitterPortal = () => {
                         <QrCode size={18} /> Scan Barcode
                       </button>
                       <label className="file-label-btn">
-                        <Camera size={18} /> Photo
+                        <Camera size={18} /> Camera
                         <input type="file" accept="image/*" capture="environment" onChange={(e) => handleFileChange(e, `panelPhoto_${idx}`)} />
                       </label>
+                      <label className="file-label-btn">
+                        <ImageIcon size={18} /> Gallery
+                        <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, `panelPhoto_gal_${idx}`)} />
+                      </label>
                     </div>
+                    {renderImagePreview(`panelPhoto_${idx}`, `panelPhoto_gal_${idx}`)}
                   </div>
                 </div>
               ))}
