@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignaturePad from '../components/SignaturePad';
-import { Camera, Image as ImageIcon, QrCode, X } from 'lucide-react';
+import { Camera, Image as ImageIcon, QrCode, X, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import fitterBg from '../assets/solar_pump.png';
@@ -122,39 +122,65 @@ const FitterPortal = () => {
   const renderImagePreview = (fileKey1, fileKey2) => {
     const file = files[fileKey1] || (fileKey2 && files[fileKey2]);
     if (!file) return null;
+    
+    const clearImage = () => {
+      const newFiles = { ...files };
+      delete newFiles[fileKey1];
+      if (fileKey2) delete newFiles[fileKey2];
+      setFiles(newFiles);
+    };
+
     return (
-      <div style={{ position: 'relative', marginTop: '10px', display: 'inline-block' }}>
-        <img 
-          src={URL.createObjectURL(file)} 
-          alt="Preview" 
-          style={{ width: '120px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--glass-border)' }} 
-        />
+      <div style={{ position: 'relative', marginTop: '10px', display: 'block', border: '3px solid #10b981', borderRadius: '12px', overflow: 'hidden' }}>
         <button 
           type="button"
-          onClick={() => {
-            const newFiles = { ...files };
-            delete newFiles[fileKey1];
-            if (fileKey2) delete newFiles[fileKey2];
-            setFiles(newFiles);
-          }}
+          onClick={clearImage}
           style={{
             position: 'absolute',
-            top: '-8px',
-            right: '-8px',
-            background: 'var(--danger)',
+            top: '8px',
+            left: '8px',
+            background: '#ef4444',
             color: 'white',
-            border: 'none',
+            border: '2px solid white',
             borderRadius: '50%',
-            width: '24px',
-            height: '24px',
+            width: '32px',
+            height: '32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            zIndex: 10
           }}
         >
-          <X size={14} />
+          <X size={18} />
+        </button>
+        <img 
+          src={URL.createObjectURL(file)} 
+          alt="Preview" 
+          style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '400px', objectFit: 'cover' }} 
+        />
+        <button 
+          type="button"
+          onClick={clearImage}
+          style={{
+            position: 'absolute',
+            bottom: '8px',
+            right: '8px',
+            background: '#334155',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}
+        >
+          <RefreshCw size={14} /> Retake
         </button>
       </div>
     );
@@ -190,7 +216,7 @@ const FitterPortal = () => {
       navigate('/admin');
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Error submitting. (Have you setup the Supabase table "installations"?)');
+      alert(`Error submitting: ${error.message || error}\n\n(Have you setup the Supabase table and RLS?)`);
     }
   };
 
