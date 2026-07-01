@@ -19,13 +19,33 @@ const exportToCSV = (data) => {
     }
     delete flatRow.panels_almm;
 
-    // Flatten uploaded files (URLs)
+    // Handle uploaded files and consolidate fields
+    let photoMap = {};
     if (Array.isArray(row.files_info)) {
       row.files_info.forEach(fileObj => {
-        flatRow[`Photo_${fileObj.field}`] = fileObj.url || fileObj.name;
+        photoMap[fileObj.field] = fileObj.url || fileObj.name;
       });
     }
     delete flatRow.files_info;
+
+    // Consolidate Controller ID
+    if (!flatRow.controllerId) {
+      flatRow.controllerId = photoMap['controllerImeiPhoto'] || photoMap['controllerImeiPhoto_gallery'] || '';
+    }
+    delete photoMap['controllerImeiPhoto'];
+    delete photoMap['controllerImeiPhoto_gallery'];
+
+    // Consolidate Pump ID
+    if (!flatRow.pumpId) {
+      flatRow.pumpId = photoMap['pumpIdPhoto'] || photoMap['pumpIdPhoto_gal'] || '';
+    }
+    delete photoMap['pumpIdPhoto'];
+    delete photoMap['pumpIdPhoto_gal'];
+
+    // Add remaining photos as their own columns
+    Object.keys(photoMap).forEach(field => {
+      flatRow[`Photo_${field}`] = photoMap[field];
+    });
 
     return flatRow;
   });
