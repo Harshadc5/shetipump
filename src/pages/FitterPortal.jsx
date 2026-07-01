@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SignaturePad from '../components/SignaturePad';
 import { Camera, Image as ImageIcon, QrCode, X, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -76,6 +76,60 @@ const FitterPortal = () => {
   // Scanner State
   const [scannerActive, setScannerActive] = useState(false);
   const [activeScannerTarget, setActiveScannerTarget] = useState(null);
+  
+  // Submit State
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState('');
+  
+  // Edit Mode State
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const editId = queryParams.get('edit');
+  const [isEditMode, setIsEditMode] = useState(!!editId);
+
+  useEffect(() => {
+    if (editId) {
+      fetchRecordForEdit(editId);
+    }
+  }, [editId]);
+
+  const fetchRecordForEdit = async (id) => {
+    try {
+      const { data, error } = await supabase.from('installations').select('*').eq('id', id).single();
+      if (error) throw error;
+      
+      setFormData({
+        beneficiaryName: data.beneficiaryname || '',
+        beneficiaryAddress: data.beneficiaryaddress || '',
+        installerName: data.installername || '',
+        installerMobile: data.installermobile || '',
+        commissioningDate: data.commissioningdate || '',
+        controllerId: data.controllerid || '',
+        pumpId: data.pumpid || '',
+        controllerVendorName: data.controllervendorname || '',
+        perPanelKw: data.perpanelkw || '',
+        pumpCapacity: data.pumpcapacity || '',
+        panelCount: data.panelcount || '',
+        motorHead: data.motorhead || '',
+        motorCapacity: data.motorcapacity || '',
+        motorSerialNumber: data.motorserialnumber || '',
+        motorManufactureName: data.motormanufacturename || '',
+        vendorRepresentativeName: data.vendorrepresentativename || ''
+      });
+      
+      if (data.panels_almm && Array.isArray(data.panels_almm)) {
+        setPanels(data.panels_almm);
+      }
+      
+      if (data.signature) {
+        setSignatureData(data.signature);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching record for edit:', error);
+      alert('Failed to load record for editing.');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -193,43 +247,93 @@ const FitterPortal = () => {
       return;
     }
     
-    // In a real scenario, we'd upload images to Supabase Storage here and get URLs.
-    // For this prototype, we'll save the form data to Supabase DB.
-    
-    const submissionData = {
-      ...formData,
-      panels_almm: panels,
-      signature: signatureData,
-      // store file names just to track them
-      files_info: Object.keys(files).map(k => ({ field: k, name: files[k].name }))
-    };
-
-    // PostgreSQL automatically lowercases all unquoted column names when creating tables.
-    // So beneficiaryName in SQL became beneficiaryname in the database.
-    // We must lowercase all keys in our JS object before sending it to Supabase.
-    const dbPayload = {};
-    for (const key in submissionData) {
-      // Convert camelCase to completely lowercase to match Postgres schema
-      let value = submissionData[key];
-      
-      // Explicit casts for Postgres types
-      if (key === 'panelCount') value = parseInt(value, 10) || 0;
-      if (key === 'commissioningDate' && !value) value = null; // empty string fails date cast
-      
-      dbPayload[key.toLowerCase()] = value;
-    }
+    setIsSubmitting(true);
+    setSubmitStatus('Uploading photos...');
 
     try {
-      const { data, error } = await supabase
-        .from('installations')
-        .insert([dbPayload]);
+      // 1. Upload all NEW files to Supabase Storage and get public URLs
+      const uploadedFilesInfo = [];
+      const fileKeys = Object.keys(files);
+      
+      for (let i = 0; i < fileKeys.length; i++) {
+        const fileKey = fileKeys[i];
+        const file = files[fileKey];
+        
+        setSubmitStatus(`Uploading photo ${i + 1} of ${fileKeys.length}...`);
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${fileKey}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('installation_photos')
+          .upload(fileName, file);
+          
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('installation_photos')
+          .getPublicUrl(fileName);
+          
+        uploadedFilesInfo.push({
+          field: fileKey,
+          name: file.name,
+          url: publicUrl
+        });
+      }
+
+      setSubmitStatus('Saving database record...');
+      
+      const submissionData = {
+        ...formData,
+        panels_almm: panels,
+        signature: signatureData
+      };
+      
+      // In edit mode, we only update files_info if they uploaded NEW files
+      // Otherwise, we leave the existing photos alone to prevent deleting them.
+      if (!isEditMode || uploadedFilesInfo.length > 0) {
+        // If edit mode and uploaded files > 0, ideally we'd merge with existing, 
+        // but for this prototype we will just replace the files_info array if they upload new ones.
+        submissionData.files_info = uploadedFilesInfo;
+      }
+
+      // PostgreSQL automatically lowercases all unquoted column names when creating tables.
+      // So beneficiaryName in SQL became beneficiaryname in the database.
+      // We must lowercase all keys in our JS object before sending it to Supabase.
+      const dbPayload = {};
+      for (const key in submissionData) {
+        // Convert camelCase to completely lowercase to match Postgres schema
+        let value = submissionData[key];
+        
+        // Explicit casts for Postgres types
+        if (key === 'panelCount') value = parseInt(value, 10) || 0;
+        if (key === 'commissioningDate' && !value) value = null; // empty string fails date cast
+        
+        dbPayload[key.toLowerCase()] = value;
+      }
+
+      let error;
+      if (isEditMode) {
+        const res = await supabase.from('installations').update(dbPayload).eq('id', editId);
+        error = res.error;
+      } else {
+        const res = await supabase.from('installations').insert([dbPayload]);
+        error = res.error;
+      }
 
       if (error) throw error;
       
-      alert('Form submitted successfully!');
-      // Reset the form for the next installation
-      window.location.reload();
+      setIsSubmitting(false);
+      alert(`Form ${isEditMode ? 'updated' : 'submitted'} successfully!`);
+      
+      if (isEditMode) {
+        navigate('/admin');
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
+      setIsSubmitting(false);
+      setSubmitStatus('');
       console.error('Error submitting form:', error);
       alert(`Error submitting: ${error.message || error}\n\n(Have you setup the Supabase table and RLS?)`);
     }
@@ -473,7 +577,9 @@ const FitterPortal = () => {
             onUpdate={setSignatureData} 
           />
 
-          <button type="submit" className="btn-primary">Submit Installation Form</button>
+          <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} disabled={isSubmitting}>
+            {isSubmitting ? submitStatus : (isEditMode ? 'Update Installation Record' : 'Submit Installation Form')}
+          </button>
 
         </form>
       </main>

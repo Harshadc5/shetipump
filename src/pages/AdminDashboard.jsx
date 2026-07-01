@@ -4,17 +4,48 @@ import { supabase } from '../supabaseClient';
 import { Download, Search, Trash2, Edit, Eye, X } from 'lucide-react';
 import adminBg from '../assets/solar_pump.png';
 
-// Simple CSV export function
+// Advanced CSV export function that flattens nested arrays/objects
 const exportToCSV = (data) => {
   if (data.length === 0) return;
-  const headers = Object.keys(data[0]).join(',');
-  const rows = data.map(row => 
-    Object.values(row).map(val => {
+
+  const flattenedData = data.map(row => {
+    const flatRow = { ...row };
+    
+    // Flatten panels array
+    if (Array.isArray(row.panels_almm)) {
+      row.panels_almm.forEach((panel, idx) => {
+        flatRow[`Panel_${idx + 1}_ALMM`] = panel;
+      });
+    }
+    delete flatRow.panels_almm;
+
+    // Flatten uploaded files (URLs)
+    if (Array.isArray(row.files_info)) {
+      row.files_info.forEach(fileObj => {
+        flatRow[`Photo_${fileObj.field}`] = fileObj.url || fileObj.name;
+      });
+    }
+    delete flatRow.files_info;
+
+    return flatRow;
+  });
+
+  // Collect all unique headers across all rows
+  const allHeaders = new Set();
+  flattenedData.forEach(row => {
+    Object.keys(row).forEach(key => allHeaders.add(key));
+  });
+  const headers = Array.from(allHeaders);
+
+  const rows = flattenedData.map(row => 
+    headers.map(header => {
+      const val = row[header] ?? '';
       if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
       return `"${String(val).replace(/"/g, '""')}"`;
     }).join(',')
   );
-  const csvString = [headers, ...rows].join('\n');
+
+  const csvString = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -60,6 +91,57 @@ const DeleteModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const ViewModal = ({ isOpen, onClose, record }) => {
+  if (!isOpen || !record) return null;
+
+  return (
+    <div className="scanner-modal" style={{ zIndex: 1000 }}>
+      <div className="scanner-content" style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
+          <h3>Installation Details</h3>
+          <button className="btn-text" onClick={onClose}><X /></button>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div><strong>Beneficiary Name:</strong> {record.beneficiaryName}</div>
+          <div><strong>Address:</strong> {record.beneficiaryAddress}</div>
+          <div><strong>Installer Name:</strong> {record.installerName}</div>
+          <div><strong>Installer Mobile:</strong> {record.installerMobile}</div>
+          <div><strong>Commissioning Date:</strong> {record.commissioningDate}</div>
+          <div><strong>Controller ID:</strong> {record.controllerId}</div>
+          <div><strong>Pump ID:</strong> {record.pumpId}</div>
+          <div><strong>Vendor Name:</strong> {record.controllerVendorName}</div>
+          <div><strong>Pump Capacity:</strong> {record.pumpCapacity}</div>
+          <div><strong>Panel Count:</strong> {record.panelCount}</div>
+        </div>
+
+        {Array.isArray(record.panels_almm) && record.panels_almm.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4>Panels ALMM</h4>
+            <ul>
+              {record.panels_almm.map((p, i) => <li key={i}>{p}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {Array.isArray(record.files_info) && record.files_info.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4>Uploaded Photos</h4>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+              {record.files_info.map((file, i) => (
+                <div key={i} style={{ border: '1px solid #e2e8f0', padding: '0.5rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <img src={file.url || ''} alt={file.field} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem', display: 'block' }} />
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>{file.field}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [records, setRecords] = useState([]);
@@ -68,7 +150,9 @@ const AdminDashboard = () => {
   
   // Modals state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [targetDeleteIds, setTargetDeleteIds] = useState([]); // can be single or array for bulk
+  const [targetDeleteIds, setTargetDeleteIds] = useState([]);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     fetchRecords();
@@ -167,6 +251,12 @@ const AdminDashboard = () => {
         onConfirm={executeDelete} 
       />
 
+      <ViewModal 
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        record={selectedRecord}
+      />
+
       <main className="admin-main">
         <div className="glass-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -227,8 +317,8 @@ const AdminDashboard = () => {
                     <td>{record.commissioningDate || 'N/A'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn-text" title="View"><Eye size={18} /></button>
-                        <button className="btn-text" title="Edit"><Edit size={18} /></button>
+                        <button className="btn-text" title="View" onClick={() => { setSelectedRecord(record); setViewModalOpen(true); }}><Eye size={18} /></button>
+                        <button className="btn-text" title="Edit" onClick={() => navigate(`/fitter?edit=${record.id}`)}><Edit size={18} /></button>
                         <button className="btn-text" title="Delete" onClick={() => initiateDelete(record.id)} style={{ color: 'var(--danger)' }}>
                           <Trash2 size={18} />
                         </button>
