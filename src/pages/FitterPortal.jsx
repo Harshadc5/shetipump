@@ -339,6 +339,11 @@ const FitterPortal = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   return (
     <div className="fitter-container fitter-bg" style={{ backgroundImage: `url(${fitterBg})` }}>
       <header className="fitter-header">
@@ -349,7 +354,7 @@ const FitterPortal = () => {
         </div>
         <h2 style={{ flex: 2, textAlign: 'center', margin: 0 }}>Maha Krushi Urja Abhiyan - PM Kusum Yojana</h2>
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-secondary" onClick={() => navigate('/')}>Logout</button>
+          <button className="btn-secondary" onClick={handleLogout}>Logout</button>
         </div>
       </header>
       

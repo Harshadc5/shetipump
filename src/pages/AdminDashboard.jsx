@@ -256,13 +256,18 @@ const AdminDashboard = () => {
     r.controllerId?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   return (
     <div className="admin-container admin-bg" style={{ backgroundImage: `url(${adminBg})` }}>
       <header className="admin-header">
         <div className="logo-section">
           <h2>ShetiPump Admin</h2>
         </div>
-        <button className="btn-secondary" onClick={() => navigate('/')}>Logout</button>
+        <button className="btn-secondary" onClick={handleLogout}>Logout</button>
       </header>
 
       <DeleteModal 
