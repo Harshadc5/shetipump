@@ -342,7 +342,11 @@ const FitterPortal = () => {
   return (
     <div className="fitter-container fitter-bg" style={{ backgroundImage: `url(${fitterBg})` }}>
       <header className="fitter-header">
-        <div style={{ flex: 1 }}></div>
+        <div style={{ flex: 1 }}>
+          {isEditMode && (
+            <button className="btn-secondary" onClick={() => navigate('/admin')}>&larr; Back</button>
+          )}
+        </div>
         <h2 style={{ flex: 2, textAlign: 'center', margin: 0 }}>Maha Krushi Urja Abhiyan - PM Kusum Yojana</h2>
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn-secondary" onClick={() => navigate('/')}>Logout</button>
