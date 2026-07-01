@@ -11,9 +11,13 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
+        {/* Protected Fitter Route */}
+        <Route element={<ProtectedRoute allowedRoles={['fitter', 'admin']} />}>
           <Route path="/fitter" element={<FitterPortal />} />
+        </Route>
+
+        {/* Protected Admin Route */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
       </Routes>
