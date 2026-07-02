@@ -264,10 +264,13 @@ const AdminDashboard = () => {
   return (
     <div className="admin-container admin-bg" style={{ backgroundImage: `url(${adminBg})` }}>
       <header className="admin-header">
-        <div className="logo-section">
+        <div style={{ flex: 1 }} className="logo-section">
           <h2>ShetiPump Admin</h2>
         </div>
-        <button className="btn-secondary" onClick={handleLogout}>Logout</button>
+        <h2 style={{ flex: 2, textAlign: 'center', margin: 0 }}>Maha Krushi Urja Abhiyan - PM Kusum Yojana</h2>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn-secondary" onClick={handleLogout}>Logout</button>
+        </div>
       </header>
 
       <DeleteModal 

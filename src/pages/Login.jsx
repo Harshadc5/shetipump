@@ -14,7 +14,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
@@ -38,7 +38,7 @@ const Login = () => {
     <div className="login-container" style={{ backgroundImage: `url(${solarBg})` }}>
       {/* Dark overlay for readability */}
       <div className="login-overlay"></div>
-      
+
       <div className="login-content">
         {/* Left Side: Branding and Messaging */}
         <div className="login-left">
@@ -50,7 +50,7 @@ const Login = () => {
           </div>
 
           <div className="hero-text">
-            <h1>Powering the Future<br/>of <span className="highlight-text">Rooftop Solar</span></h1>
+            <h1>Powering the Future of<br />of <span className="highlight-text">Sustainable Farming</span></h1>
             <p>The ultimate enterprise platform for fitters and admins to seamlessly manage solar installations, track assets, and automatically generate government compliance documents.</p>
           </div>
 
@@ -71,29 +71,29 @@ const Login = () => {
           <div className="login-glass-card">
             <h2>Welcome Back</h2>
             <p className="login-subtitle">Please enter your credentials to access the portal.</p>
-            
+
             <form onSubmit={handleLogin}>
               <div className="input-group">
                 <label>Email Address</label>
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
+                <input
+                  type="email"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required 
+                  required
                 />
               </div>
               <div className="input-group">
                 <label>Password</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
+                <input
+                  type="password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required 
+                  required
                 />
               </div>
-              
+
               <button type="submit" className="btn-login" disabled={loading}>
                 {loading ? 'Authenticating...' : 'Sign In securely'}
               </button>

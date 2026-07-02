@@ -76,11 +76,11 @@ const FitterPortal = () => {
   // Scanner State
   const [scannerActive, setScannerActive] = useState(false);
   const [activeScannerTarget, setActiveScannerTarget] = useState(null);
-  
+
   // Submit State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
-  
+
   // Edit Mode State
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -97,7 +97,7 @@ const FitterPortal = () => {
     try {
       const { data, error } = await supabase.from('installations').select('*').eq('id', id).single();
       if (error) throw error;
-      
+
       setFormData({
         beneficiaryName: data.beneficiaryname || '',
         beneficiaryAddress: data.beneficiaryaddress || '',
@@ -116,15 +116,15 @@ const FitterPortal = () => {
         motorManufactureName: data.motormanufacturename || '',
         vendorRepresentativeName: data.vendorrepresentativename || ''
       });
-      
+
       if (data.panels_almm && Array.isArray(data.panels_almm)) {
         setPanels(data.panels_almm);
       }
-      
+
       if (data.signature) {
         setSignatureData(data.signature);
       }
-      
+
     } catch (error) {
       console.error('Error fetching record for edit:', error);
       alert('Failed to load record for editing.');
@@ -176,7 +176,7 @@ const FitterPortal = () => {
   const renderImagePreview = (fileKey1, fileKey2) => {
     const file = files[fileKey1] || (fileKey2 && files[fileKey2]);
     if (!file) return null;
-    
+
     const clearImage = () => {
       const newFiles = { ...files };
       delete newFiles[fileKey1];
@@ -186,7 +186,7 @@ const FitterPortal = () => {
 
     return (
       <div style={{ position: 'relative', marginTop: '10px', display: 'block', border: '3px solid #10b981', borderRadius: '12px', overflow: 'hidden' }}>
-        <button 
+        <button
           type="button"
           onClick={clearImage}
           style={{
@@ -209,12 +209,12 @@ const FitterPortal = () => {
         >
           <X size={18} />
         </button>
-        <img 
-          src={URL.createObjectURL(file)} 
-          alt="Preview" 
-          style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '400px', objectFit: 'cover' }} 
+        <img
+          src={URL.createObjectURL(file)}
+          alt="Preview"
+          style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '400px', objectFit: 'cover' }}
         />
-        <button 
+        <button
           type="button"
           onClick={clearImage}
           style={{
@@ -246,7 +246,7 @@ const FitterPortal = () => {
       alert('Please provide a signature.');
       return;
     }
-    
+
     setIsSubmitting(true);
     setSubmitStatus('Uploading photos...');
 
@@ -254,26 +254,26 @@ const FitterPortal = () => {
       // 1. Upload all NEW files to Supabase Storage and get public URLs
       const uploadedFilesInfo = [];
       const fileKeys = Object.keys(files);
-      
+
       for (let i = 0; i < fileKeys.length; i++) {
         const fileKey = fileKeys[i];
         const file = files[fileKey];
-        
+
         setSubmitStatus(`Uploading photo ${i + 1} of ${fileKeys.length}...`);
-        
+
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${fileKey}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('installation_photos')
           .upload(fileName, file);
-          
+
         if (uploadError) throw uploadError;
-        
+
         const { data: { publicUrl } } = supabase.storage
           .from('installation_photos')
           .getPublicUrl(fileName);
-          
+
         uploadedFilesInfo.push({
           field: fileKey,
           name: file.name,
@@ -282,13 +282,13 @@ const FitterPortal = () => {
       }
 
       setSubmitStatus('Saving database record...');
-      
+
       const submissionData = {
         ...formData,
         panels_almm: panels,
         signature: signatureData
       };
-      
+
       // In edit mode, we only update files_info if they uploaded NEW files
       // Otherwise, we leave the existing photos alone to prevent deleting them.
       if (!isEditMode || uploadedFilesInfo.length > 0) {
@@ -304,11 +304,11 @@ const FitterPortal = () => {
       for (const key in submissionData) {
         // Convert camelCase to completely lowercase to match Postgres schema
         let value = submissionData[key];
-        
+
         // Explicit casts for Postgres types
         if (key === 'panelCount') value = parseInt(value, 10) || 0;
         if (key === 'commissioningDate' && !value) value = null; // empty string fails date cast
-        
+
         dbPayload[key.toLowerCase()] = value;
       }
 
@@ -322,10 +322,10 @@ const FitterPortal = () => {
       }
 
       if (error) throw error;
-      
+
       setIsSubmitting(false);
       alert(`Form ${isEditMode ? 'updated' : 'submitted'} successfully!`);
-      
+
       if (isEditMode) {
         navigate('/admin');
       } else {
@@ -357,14 +357,14 @@ const FitterPortal = () => {
           <button className="btn-secondary" onClick={handleLogout}>Logout</button>
         </div>
       </header>
-      
+
       {scannerActive && (
         <BarcodeScannerModal onScan={handleScan} onClose={() => setScannerActive(false)} />
       )}
 
       <main className="form-wrapper">
         <form className="glass-card" onSubmit={handleSubmit}>
-          
+
           <div className="input-group">
             <label>Beneficiary Name</label>
             <input type="text" name="beneficiaryName" value={formData.beneficiaryName} onChange={handleInputChange} required />
@@ -400,7 +400,7 @@ const FitterPortal = () => {
             <input type="tel" name="installerMobile" value={formData.installerMobile} onChange={handleInputChange} required />
           </div>
           <div className="input-group">
-            <label>Date of Commissioning</label>
+            <label>Date of Installation</label>
             <input type="date" name="commissioningDate" value={formData.commissioningDate} onChange={handleInputChange} required />
           </div>
 
@@ -459,15 +459,15 @@ const FitterPortal = () => {
               <option value="7.5HP">7.5HP</option>
             </select>
           </div>
-          
+
           <div className="input-group">
             <label>Panel No. (Enter number to scan barcodes)</label>
-            <input 
-              type="number" 
-              name="panelCount" 
-              min="0" 
-              value={formData.panelCount} 
-              onChange={handleInputChange} 
+            <input
+              type="number"
+              name="panelCount"
+              min="0"
+              value={formData.panelCount}
+              onChange={handleInputChange}
               onWheel={(e) => e.target.blur()}
             />
           </div>
@@ -479,10 +479,10 @@ const FitterPortal = () => {
                 <div key={idx} className="panel-box">
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <label>S.No. {idx + 1}: ALMM Number</label>
-                    <input 
-                      type="text" 
-                      value={panelValue} 
-                      onChange={(e) => handlePanelChange(idx, e.target.value)} 
+                    <input
+                      type="text"
+                      value={panelValue}
+                      onChange={(e) => handlePanelChange(idx, e.target.value)}
                       placeholder="e.g. ALMM Text or Scan Barcode"
                     />
                     <div className="file-scan-row">
@@ -547,7 +547,7 @@ const FitterPortal = () => {
             {renderImagePreview('photoSetup', 'photoSetup_gal')}
           </div>
           <div className="input-group">
-            <label>2. Beneficiary Land or Landmark (Tree/Home/Well)</label>
+            <label>2. Beneficiary Water Pump Photo</label>
             <div className="file-scan-row">
               <label className="file-label-btn">
                 <Camera size={18} /> Camera
@@ -580,10 +580,10 @@ const FitterPortal = () => {
             <label>Vendor Representative Name</label>
             <input type="text" name="vendorRepresentativeName" value={formData.vendorRepresentativeName} onChange={handleInputChange} required />
           </div>
-          
-          <SignaturePad 
-            title="Signature of Technical Person" 
-            onUpdate={setSignatureData} 
+
+          <SignaturePad
+            title="Signature of Technical Person"
+            onUpdate={setSignatureData}
           />
 
           <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} disabled={isSubmitting}>
