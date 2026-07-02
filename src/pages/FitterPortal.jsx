@@ -87,9 +87,37 @@ const FitterPortal = () => {
   const editId = queryParams.get('edit');
   const [isEditMode, setIsEditMode] = useState(!!editId);
 
+  // Dashboard State
+  const [currentView, setCurrentView] = useState('menu'); // 'menu', 'new_form', 'view_list', 'view_detail'
+  const [userRecords, setUserRecords] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        fetchUserRecords(user.id);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const fetchUserRecords = async (uid) => {
+    try {
+      const { data, error } = await supabase.from('installations').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      if (error) throw error;
+      setUserRecords(data || []);
+    } catch (err) {
+      console.error('Error fetching user records', err);
+    }
+  };
+
   useEffect(() => {
     if (editId) {
       fetchRecordForEdit(editId);
+      setCurrentView('new_form');
     }
   }, [editId]);
 
@@ -312,6 +340,10 @@ const FitterPortal = () => {
         dbPayload[key.toLowerCase()] = value;
       }
 
+      if (userId && !isEditMode) {
+        dbPayload.user_id = userId;
+      }
+
       let error;
       if (isEditMode) {
         const res = await supabase.from('installations').update(dbPayload).eq('id', editId);
@@ -344,20 +376,102 @@ const FitterPortal = () => {
     navigate('/');
   };
 
-  return (
-    <div className="fitter-container fitter-bg" style={{ backgroundImage: `url(${fitterBg})` }}>
-      <header className="fitter-header">
-        <div style={{ flex: 1 }}>
-          {isEditMode && (
-            <button className="btn-secondary" onClick={() => navigate('/admin')}>&larr; Back</button>
+  const renderMenu = () => (
+    <div className="admin-main">
+      <div className="glass-card" style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
+        <h2>Welcome to Fitter Portal</h2>
+        <p style={{ marginBottom: '30px', color: 'var(--text-muted)' }}>What would you like to do today?</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <button className="btn-primary" style={{ padding: '15px', fontSize: '18px' }} onClick={() => setCurrentView('new_form')}>
+            + New Installation Form
+          </button>
+          <button className="btn-secondary" style={{ padding: '15px', fontSize: '18px' }} onClick={() => setCurrentView('view_list')}>
+            <ImageIcon size={18} style={{ verticalAlign: 'middle', marginRight: '5px' }} /> View Uploaded Forms
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderList = () => (
+    <div className="admin-main">
+      <div className="glass-card" style={{ maxWidth: '900px', margin: '40px auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3>Your Uploaded Forms</h3>
+          <button className="btn-secondary" onClick={() => setCurrentView('menu')}>Back to Menu</button>
+        </div>
+        {userRecords.length === 0 ? (
+          <p>No forms uploaded yet.</p>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Beneficiary Name</th>
+                  <th>Controller ID</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userRecords.map(record => (
+                  <tr key={record.id}>
+                    <td>{record.beneficiaryname}</td>
+                    <td>{record.controllerid}</td>
+                    <td>{new Date(record.created_at).toLocaleDateString()}</td>
+                    <td>
+                      <button className="btn-secondary" style={{ padding: '5px 10px' }} onClick={() => {
+                        setSelectedRecord(record);
+                        setCurrentView('view_detail');
+                      }}>View Details</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDetail = () => {
+    if (!selectedRecord) return null;
+    return (
+      <div className="admin-main">
+        <div className="glass-card" style={{ maxWidth: '900px', margin: '40px auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3>Form Details</h3>
+            <button className="btn-secondary" onClick={() => setCurrentView('view_list')}>Back to List</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div><strong>Beneficiary Name:</strong> {selectedRecord.beneficiaryname}</div>
+            <div><strong>Address:</strong> {selectedRecord.beneficiaryaddress}</div>
+            <div><strong>Controller ID:</strong> {selectedRecord.controllerid}</div>
+            <div><strong>Pump ID:</strong> {selectedRecord.pumpid}</div>
+            <div><strong>Pump Capacity:</strong> {selectedRecord.pumpcapacity}</div>
+            <div><strong>Commissioning Date:</strong> {selectedRecord.commissioningdate}</div>
+          </div>
+          {selectedRecord.files_info && selectedRecord.files_info.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h4>Uploaded Photos</h4>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {selectedRecord.files_info.map((f, idx) => (
+                  <div key={idx}>
+                    <p style={{ fontSize: '12px', color: 'gray' }}>{f.name}</p>
+                    <img src={f.url} alt={f.name} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-        <h2 style={{ flex: 2, textAlign: 'center', margin: 0 }}>Maha Krushi Urja Abhiyan - PM Kusum Yojana</h2>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-secondary" onClick={handleLogout}>Logout</button>
-        </div>
-      </header>
+      </div>
+    );
+  };
 
+  const renderForm = () => (
+    <>
       {scannerActive && (
         <BarcodeScannerModal onScan={handleScan} onClose={() => setScannerActive(false)} />
       )}
@@ -592,6 +706,30 @@ const FitterPortal = () => {
 
         </form>
       </main>
+    </>
+  );
+
+  return (
+    <div className="fitter-container fitter-bg" style={{ backgroundImage: `url(${fitterBg})` }}>
+      <header className="fitter-header">
+        <div style={{ flex: 1 }}>
+          {isEditMode && (
+            <button className="btn-secondary" onClick={() => navigate('/admin')}>&larr; Back</button>
+          )}
+          {!isEditMode && currentView !== 'menu' && (
+            <button className="btn-secondary" onClick={() => setCurrentView('menu')}>&larr; Menu</button>
+          )}
+        </div>
+        <h2 style={{ flex: 2, textAlign: 'center', margin: 0 }}>Maha Krushi Urja Abhiyan - PM Kusum Yojana</h2>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn-secondary" onClick={handleLogout}>Logout</button>
+        </div>
+      </header>
+
+      {currentView === 'menu' && renderMenu()}
+      {currentView === 'new_form' && renderForm()}
+      {currentView === 'view_list' && renderList()}
+      {currentView === 'view_detail' && renderDetail()}
     </div>
   );
 };
