@@ -177,6 +177,52 @@ export default function SignaturePad({ title, onUpdate }) {
     onUpdate("");
   }, [onUpdate]);
 
+  // --- Upload Image ---
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = useCallback((e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Scale to fit
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const drawWidth = img.width * scale;
+        const drawHeight = img.height * scale;
+        const dx = (canvas.width - drawWidth) / 2;
+        const dy = (canvas.height - drawHeight) / 2;
+        
+        ctx.drawImage(img, dx, dy, drawWidth, drawHeight);
+        
+        // Reset transform to allow drawing over the image if needed
+        ctx.scale(dpr, dpr);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#111827";
+        
+        setIsEmpty(false);
+        onUpdate(canvas.toDataURL("image/png"));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    
+    // Clear input so same file can be selected again
+    e.target.value = null;
+  }, [onUpdate]);
+
   return (
     <div style={{ width: "100%", marginBottom: "1.5rem" }}>
       <label className="form-label" style={{ color: "var(--text-main)", fontWeight: "500", display: "block", marginBottom: "0.5rem" }}>{title}</label>
@@ -236,25 +282,58 @@ export default function SignaturePad({ title, onUpdate }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-        <button
-          type="button"
-          onClick={clear}
-          style={{
-            padding: "6px 16px",
-            fontSize: "13px",
-            borderRadius: "6px",
-            border: "1px solid #94a3b8",
-            background: "#f8fafc",
-            color: "#475569",
-            cursor: "pointer",
-            fontWeight: "600",
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}
-        >
-          ↺ Clear Signature
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={clear}
+            style={{
+              padding: "6px 16px",
+              fontSize: "13px",
+              borderRadius: "6px",
+              border: "1px solid #94a3b8",
+              background: "#f8fafc",
+              color: "#475569",
+              cursor: "pointer",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            ↺ Clear
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: "6px 16px",
+              fontSize: "13px",
+              borderRadius: "6px",
+              border: "1px solid #94a3b8",
+              background: "#f8fafc",
+              color: "#475569",
+              cursor: "pointer",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept="image/*" 
+            style={{ display: "none" }} 
+          />
+        </div>
         {!isEmpty && (
           <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "600" }}>
             ✓ Signed

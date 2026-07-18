@@ -60,9 +60,6 @@ const FitterPortal = () => {
     pumpCapacity: '3HP', // default 3HP, 5HP, 7.5HP
     panelCount: 0,
     motorHead: '30 m', // 30m, 50m, 70m, 100m
-    motorCapacity: '3HP', // 3HP, 5HP, 7.5HP
-    motorSerialNumber: '',
-    motorManufactureName: '',
     vendorRepresentativeName: '',
   });
 
@@ -139,9 +136,6 @@ const FitterPortal = () => {
         pumpCapacity: data.pumpcapacity || '',
         panelCount: data.panelcount || '',
         motorHead: data.motorhead || '',
-        motorCapacity: data.motorcapacity || '',
-        motorSerialNumber: data.motorserialnumber || '',
-        motorManufactureName: data.motormanufacturename || '',
         vendorRepresentativeName: data.vendorrepresentativename || ''
       });
 
@@ -566,7 +560,7 @@ const FitterPortal = () => {
             <input type="text" name="perPanelKw" value={formData.perPanelKw} onChange={handleInputChange} />
           </div>
           <div className="input-group">
-            <label>Select Pump Capacity</label>
+            <label>Select Pump Motor</label>
             <select name="pumpCapacity" value={formData.pumpCapacity} onChange={handleInputChange}>
               <option value="3HP">3HP</option>
               <option value="5HP">5HP</option>
@@ -628,22 +622,7 @@ const FitterPortal = () => {
               <option value="100 m">100 m</option>
             </select>
           </div>
-          <div className="input-group">
-            <label>Motor Capacity (HP/KW)</label>
-            <select name="motorCapacity" value={formData.motorCapacity} onChange={handleInputChange}>
-              <option value="3HP">3HP</option>
-              <option value="5HP">5HP</option>
-              <option value="7.5HP">7.5HP</option>
-            </select>
-          </div>
-          <div className="input-group">
-            <label>Motor Serial Number</label>
-            <input type="text" name="motorSerialNumber" value={formData.motorSerialNumber} onChange={handleInputChange} />
-          </div>
-          <div className="input-group">
-            <label>Motor Manufacture Name</label>
-            <input type="text" name="motorManufactureName" value={formData.motorManufactureName} onChange={handleInputChange} />
-          </div>
+
 
           <h3>Upload Site Photos</h3>
           <div className="input-group">
